@@ -21,6 +21,9 @@ apptainer run --containall run cpg_predictor.sif <ip_address> <port>
 ```
 
 ### Build Container
+
+If you would like to make edits to the code/re-build the container use the command below. Directory structure must be as shown below. 
+
 ```bash
 apptainer build cpg_predictor.sif predictor.def
 ```
@@ -93,7 +96,7 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 - **Prediction ranges**: Sequences are trimmed to the start and end of the ranges before calculating CpG content
 
 
-## Project Structure
+## Directory Structure
 
 ```
 CpG_Predictor/
