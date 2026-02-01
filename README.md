@@ -66,7 +66,6 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
   "prediction_tasks": [
     {
       "name": "task_name",
-      "scale_prediction_actual": "linear",
       "type_requested": "accessibility",
         "type_actual": [
             "NA"
