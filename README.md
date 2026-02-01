@@ -62,7 +62,7 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 ```json
 {
   "predictor_name": "CpG Predictor",
-  "bin_size": 1,
+  "bin_size": 1, ##only returned for track requests
   "prediction_tasks": [
     {
       "name": "task_name",
