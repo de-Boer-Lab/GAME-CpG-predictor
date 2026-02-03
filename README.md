@@ -8,7 +8,7 @@ We designed the CpG Predictor to serve as a baseline for models, as CpG content 
 - **Track Predictions**: Returns per-base CpG density using sliding window approach
 - **Flexible Scaling**: Linear or log2-scaled outputs (default is linear)
 - **Multiple Formats**: Supports JSON and MessagePack request/response formats
-- **Containerized**:Apptainer container for reproducible deployment
+- **Containerized**: Apptainer container for reproducible deployment
 
 ## Quick Start
 
@@ -42,14 +42,14 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 **Request Format:**
 ```json
 {
-  "readout": "point" | "track",
+  "readout": "point" # or "track",
   "prediction_tasks": [
     {
       "name": "task_name",
       "type": "experiment_type",
       "cell_type": "cell_type",
       "species": "species",
-      "scale": "linear" | "log"
+      "scale": "linear" # or "log"
     }
   ],
   "sequences": {
@@ -65,7 +65,7 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 ```json
 {
   "predictor_name": "CpG Predictor",
-  "bin_size": 1, ##only returned for track requests
+  "bin_size": 1, # only returned for track requests
   "prediction_tasks": [
     {
       "name": "task_name",
