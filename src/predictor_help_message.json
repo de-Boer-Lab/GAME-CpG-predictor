@@ -1,8 +1,7 @@
 {
   "model": "CpG Predictor",
-  "version": "1.0",
-  "build_date": "Nov 6th, 2025",
+  "game_schema_version": "1.0",
   "container_authors": "Ishika Luthra",
   "model_authors": "Ishika Luthra",
-  "description": "CpG Predictor will return the average CpG count acorss the length of a sequence for point requests or will return the CpG density per base"
+  "description": "CpG Predictor will return the average CpG count across the length of a sequence for point requests or will return the CpG density per base"
 }
