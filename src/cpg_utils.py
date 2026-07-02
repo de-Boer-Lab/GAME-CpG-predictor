@@ -1,8 +1,8 @@
-import os
-import pandas as pd
 import numpy as np
-def predict_cpg(sequences: dict, readout: str, scale_requested):
-    #If no specific scale is request then defalt to linear
+import pandas as pd
+
+def predict_cpg(sequences: dict, readout: str, scale_requested, prediction_ranges):
+    #If no specific scale is request then default to linear
     if scale_requested is None:
         scale_actual = "linear"
     else:
@@ -10,12 +10,29 @@ def predict_cpg(sequences: dict, readout: str, scale_requested):
 
     predictions = {}
     
+    # NOTE: Do not modify the original sequences dictionary directly,
+    # as it may be needed for multiple prediction tasks.
+    # Instead, create a copy to work with.
+    seqs = {k: v for k, v in sequences.items()}
+    
+    # If prediction ranges were sent from the Evaluator use them to crop the sequences
+    if prediction_ranges:
+        for seq_id, pr in prediction_ranges.items():
+            if pr: # Only process non-empty ranges
+                start, end = pr
+                # print(f"DEBUG: Original length of sequence '{seq_id}': {len(sequences[seq_id])} bases.")
+                # Slice the sequence. `prediction_range` is start, end inclusive
+                seqs[seq_id] = seqs[seq_id][start:end+1]
+                # Print length of sequence after trimming for debugging
+                # print(f"DEBUG: Trimmed length of sequence '{seq_id}': {len(seqs[seq_id])} bases.")
+                print(f"Sequence '{seq_id}' trimmed to prediction range [{start}, {end}].")
+
     if readout == "point":
-        for seq_id, sequence in sequences.items():
-            predictions[seq_id] = [cpg_mean(sequence, scale_actual)]
+        for seq_id, sequence in seqs.items():
+            predictions[seq_id] = cpg_mean(sequence, scale_actual)
    
     if readout == "track":
-        for seq_id, sequence in sequences.items():
+        for seq_id, sequence in seqs.items():
             predictions[seq_id] = calculate_cpg_per_base(sequence, scale_actual, window_size=50)
 
     return predictions, scale_actual
@@ -105,4 +122,3 @@ def calculate_cpg_per_base(sequence, scale_actual, window_size):
         cpg_bp = np.log2(df['cpg_density'].to_numpy() + epsilon).tolist()
     
     return cpg_bp
-

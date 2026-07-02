@@ -1,35 +1,14 @@
 '''RESTful Test Evaluator Utilizing Flask'''
-import os
+
 import sys
 import json
 from flask import Flask
 
+from config import HELP_FILE, PREDICTOR_NAME, SUPPORTED_REQUEST_FORMATS, SUPPORTED_RESPONSE_FORMATS
 from error_checking_functions import *
 from schema_validation import *
 from cpg_utils import *
 from predictor_content_handler import decode_request, encode_response
-
-# Get the absolute path of the script's directory
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Hardcode name of this Predictor. It will be added to ALL responses.
-PREDICTOR_NAME = "CpG Predictor"
-
-# Determine if running inside a container or not
-if os.path.exists('/.singularity.d'):
-    # Running inside the container
-    print("Running inside the container...🥡")
-    HELP_FILE = "/predictor_container_cpg/predictor_help_message.json"
-else:
-    # Running outside the container
-    print("Running outside the container...📋")
-    PREDICTOR_CONTAINER_DIR = os.path.dirname(SCRIPT_DIR)
-    HELP_FILE = os.path.join(SCRIPT_DIR, 'predictor_help_message.json')
-
-
-# ------ Configuration for Wire-Format ------
-SUPPORTED_REQUEST_FORMATS = [fmt.lower() for fmt in ["application/json", "application/msgpack"]]
-SUPPORTED_RESPONSE_FORMATS = [fmt.lower() for fmt in ["application/json", "application/msgpack"]] # JSON is always supported even when not mentioned. This is jsut to show that. 
 
 # --- Flask App and Central Error Handler ---
 app = Flask(__name__)
@@ -39,7 +18,7 @@ app.json.sort_keys = False
 
 def create_error_response(error_key, messages, status_code):
     """ 
-    Formats error response into a standarized JSON structure.
+    Formats error response into a standardized JSON structure.
     
     Args:
         error_key (str): The category of the error (e.g. 'bad_prediction_request', 'prediction_request_failed').
@@ -123,7 +102,10 @@ def predict():
         # Preprocess the data using the imported function
         sequences = preprocess_data(evaluator_request)
         readout_type = evaluator_request.get('readout')
-        
+        prediction_ranges = evaluator_request.get('prediction_ranges')
+        if prediction_ranges is not None:
+            print("Prediction ranges will be used to return the request")
+
         if readout_type in ["track"]:
             json_return = {
                 'predictor_name': PREDICTOR_NAME,
@@ -132,12 +114,15 @@ def predict():
                 "prediction_tasks": [],
             }
 
-        if readout_type in ["point"]:
+        elif readout_type in ["point"]:
             json_return = {
                 'predictor_name': PREDICTOR_NAME,
                 # Prediction task is an array of objects for all requested tasks
                 "prediction_tasks": [],
             }
+            
+        else:
+            raise BadRequestError(f"Test Predictor cannot process '{readout_type}' readout type.")
 
         # Loop through all the prediction tasks
         for prediction_task in evaluator_request["prediction_tasks"]:
@@ -145,8 +130,8 @@ def predict():
             request_type = prediction_task["type"]
             cell_type = prediction_task["cell_type"]
             scale_requested = prediction_task.get("scale", None)
-            print(scale_requested)
-            task_prediction, scale_actual = predict_cpg(sequences, readout_type, scale_requested)
+            
+            task_prediction, scale_actual = predict_cpg(sequences, readout_type, scale_requested, prediction_ranges)
             # Create structured response for the evaluator
             current_prediction_task = {
                 "name": prediction_task["name"],

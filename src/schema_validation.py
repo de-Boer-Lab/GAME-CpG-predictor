@@ -73,21 +73,25 @@ def preprocess_data(payload):
             ):
                 flanked = f"{upstream_seq}{sequence}{downstream_seq}"
                 sequences[seq_id] = flanked
-
-    # Apply prediction_ranges if provided
-    if 'prediction_ranges' in payload:
-        for seq_id, pr in payload['prediction_ranges'].items():
-            if pr: # Only process non-empty ranges
-                start, end = pr
-                # Slice the sequence. `prediction_range` is start, end inclusive
-                sequences[seq_id] = sequences[seq_id][start:end+1]
-                print(f"Sequence '{seq_id}' trimmed to prediction range [{start}, {end}].")
     
     # Check that the final sequences meet model specifications.
     # Since this is model-specific, it utilizes `PredictionFailedError`.
     errors = {'prediction_request_failed': []}
     errors = check_seqs_specifications(sequences, errors)
-    
+    if 'prediction_ranges' in payload:
+        for seq_id, pr in payload['prediction_ranges'].items():
+            if pr: # Only process non-empty ranges
+                start, end = pr
+                seq_len = len(sequences[seq_id])
+
+                if start >= seq_len or end >= seq_len:
+                    # Handle the empty sequence case for a clean message
+                    if seq_len == 0:
+                        err_msg = f"Invalid range for '{seq_id}': cannot specify a range for a non-existent or empty sequence."
+                    else:
+                        err_msg = f"Invalid range for '{seq_id}': index is out of bounds. The maximum valid index for a sequence of length {seq_len} is {seq_len - 1}."
+                    errors['prediction_request_failed'].append(err_msg)
+            
     # Model-specific error checking: Readout type check
     readout_type = payload['readout']
     if not readout_type in ["point", "track"]:

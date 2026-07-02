@@ -1,0 +1,82 @@
+Bootstrap: docker
+From: python:3.13-slim
+
+%files
+    ./config.py /CpG_Predictor/config.py
+    ./cpg_utils.py /CpG_Predictor/cpg_utils.py
+    ./error_checking_functions.py /CpG_Predictor/error_checking_functions.py
+    ./predictor_content_handler.py /CpG_Predictor/predictor_content_handler.py
+    ./predictor_help_message.json /CpG_Predictor/predictor_help_message.json
+    ./predictor_RestAPI.py /CpG_Predictor/predictor_RestAPI.py
+    ./schema_validation.py /CpG_Predictor/schema_validation.py
+
+%environment
+    export APPTAINER_NO_MOUNT="home,tmp,proc,sys,dev"
+    export LC_ALL=C
+   
+%post
+    # Install system packages and dependencies
+    echo "Installing system dependencies..."
+    apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+    echo "Installing Python dependencies..."
+    python -m pip install --upgrade pip
+    python -m pip install --no-cache-dir numpy tqdm pandas msgpack flask
+    
+    # Set permissions to access all directories
+    echo "Setting permissions for directories and script..."
+    chmod -R 755 /CpG_Predictor/
+
+%runscript
+    exec python3 /CpG_Predictor/predictor_RestAPI.py "$@"
+
+%startscript
+    exec python3 /CpG_Predictor/predictor_RestAPI.py "$@"
+
+%labels
+    Author "Ishika Luthra"
+    game_schema_version "1.0"
+    Description "CpG Predictor for GAME framework. A simple, dependency-light reference Predictor that calculates CpG dinucleotide frequency from input sequences."
+    
+%help
+    This container for Predictor includes:
+    - A Flask-based REST API (`predictor_RestAPI.py`).
+    - The CpG Predictor logic implemented in pure Python (numpy/pandas). There are
+      no trained model weights and no GPU dependency -- predictions are a deterministic
+      CpG dinucleotide calculation, so the container runs CPU-only.
+    - Utility scripts for schema validation, preprocessing, content negotiation
+      (JSON / MessagePack), and the CpG calculation itself.
+
+    Run the container
+    ```
+    apptainer run --containall cpg_predictor.sif HOST PORT
+    ```
+
+    Details:
+    - The container launches a Flask-based server to receive data via HTTP POST requests.
+    - Replace `HOST` and `PORT` with the server and port configuration for the evaluator to connect to.
+
+    API Endpoints:
+    - `/formats` - GET:  supported request and response formats
+    - `/help`    - GET:  predictor metadata and usage information
+    - `/predict` - POST: main endpoint for submitting prediction requests
+
+    Predictions:
+    - `point` readout: average CpG frequency across each sequence (one value per sequence).
+    - `track` readout: per-base CpG density from a sliding window (bin_size 1).
+    - Optional `scale` ("linear" or "log") and `prediction_ranges` are honored per request.
+
+    Purpose:
+    - A simple, dependency-light reference Predictor for the GAME framework (schema v1.0).
+    - Useful as a template and as a sanity check for wiring up an Evaluator-Predictor pipeline.
+
+    Example Command:
+    ```
+    apptainer run --containall cpg_predictor.sif 172.xx.xx.xxx 5000
+    ```
+
+    Arguments:
+    1. `HOST IP`: IP address or hostname of the Predictor server.
+    2. `PORT`   : Port number the Predictor is listening on.
