@@ -7,7 +7,7 @@ We designed the CpG Predictor to serve as a baseline for models, as CpG content 
 - To learn more about the GAME Framework: [Main GAME Repository](https://github.com/de-Boer-Lab/Genomic-API-for-Model-Evaluation), [preprint](https://www.biorxiv.org/content/10.1101/2025.07.04.663250v1.full)
 - GAME Documentation: [ReadTheDocs](https://genomic-api-for-model-evaluation-documentation.readthedocs.io)
 - Pre-built CpG Predictor container image: [Hugging Face](https://huggingface.co/datasets/deBoerLab/CpG_Predictor_GAME)
-- List of all [GAME Modules](https://github.com/de-Boer-Lab/GAME_matcher)
+- List of all [GAME Modules](https://github.com/de-Boer-Lab/GAME_modules)
 
 ## Features
 
@@ -18,6 +18,7 @@ We designed the CpG Predictor to serve as a baseline for models, as CpG content 
 - **Containerized**: Apptainer container for reproducible deployment
 
 ### Run CpG Prediction
+
 ```bash
 apptainer run --containall run cpg_predictor.sif <ip_address> <port>
 # Example: apptainer run --containall cpg_predictor.sif 0.0.0.0 5000
@@ -25,7 +26,7 @@ apptainer run --containall run cpg_predictor.sif <ip_address> <port>
 
 ### Build Container
 
-If you would like to make edits to the code/re-build the container use the command below. Directory structure must be as shown below. 
+If you would like to make edits to the code/re-build the container use the command below. Directory structure must be as shown below.
 
 ```bash
 apptainer build cpg_predictor.sif predictor.def
@@ -34,15 +35,19 @@ apptainer build cpg_predictor.sif predictor.def
 ## API Endpoints
 
 ### GET `/help`
+
 Returns predictor metadata and version information.
 
 ### GET `/formats`
+
 Returns supported request/response formats (JSON, MessagePack).
 
 ### POST `/predict`
+
 Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 
 **Request Format:**
+
 ```json
 {
   "readout": "point" # or "track",
@@ -65,6 +70,7 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 ```
 
 **Response Format:**
+
 ```json
 {
   "predictor_name": "CpG Predictor",
@@ -97,7 +103,6 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 - **CpG Definition**: Dinucleotide sequence "CG"
 - **Density Calculation**: (CpG count / window length) × 100
 - **Prediction ranges**: Sequences are trimmed to the start and end of the ranges before calculating CpG content
-
 
 ## Directory Structure
 
