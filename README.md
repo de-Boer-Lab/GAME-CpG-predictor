@@ -1,6 +1,13 @@
 # GAME-CpG-Predictor
 
-We designed the CpG Predictor to serve as a baseline for models, as CpG content is correlated with many functional readouts. It ignores the type, cell type, and species keys in the Evaluator requests since it is simply counting CpG instances across the sequences. For point requests, it will return the mean CpG counts across the input sequence, and, for track requests, it will return the CpG density at each base pair (calculated using a sliding window of 100bp). Any scaling type can be fulfilled by this Predictor. 
+We designed the CpG Predictor to serve as a baseline for models, as CpG content is correlated with many functional readouts. It ignores the type, cell type, and species keys in the Evaluator requests since it is simply counting CpG instances across the sequences. For point requests, it will return the mean CpG counts across the input sequence, and, for track requests, it will return the CpG density at each base pair (calculated using a sliding window of 100bp). Any scaling type can be fulfilled by this Predictor.
+
+## Important Links
+
+- To learn more about the GAME Framework: [Main GAME Repository](https://github.com/de-Boer-Lab/Genomic-API-for-Model-Evaluation), [preprint](https://www.biorxiv.org/content/10.1101/2025.07.04.663250v1.full)
+- GAME Documentation: [ReadTheDocs](https://genomic-api-for-model-evaluation-documentation.readthedocs.io)
+- Pre-built CpG Predictor container image: [Hugging Face](https://huggingface.co/datasets/deBoerLab/CpG_Predictor_GAME)
+- List of all [GAME Modules](https://github.com/de-Boer-Lab/GAME_matcher)
 
 ## Features
 
@@ -9,10 +16,6 @@ We designed the CpG Predictor to serve as a baseline for models, as CpG content 
 - **Flexible Scaling**: Linear or log2-scaled outputs (default is linear)
 - **Multiple Formats**: Supports JSON and MessagePack request/response formats
 - **Containerized**: Apptainer container for reproducible deployment
-
-## Quick Start
-
-[To run pre-built CpG Predictor download here](https://zenodo.org/records/18182725)
 
 ### Run CpG Prediction
 ```bash
