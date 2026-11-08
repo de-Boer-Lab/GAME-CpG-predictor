@@ -1,6 +1,6 @@
 # GAME-CpG-Predictor
 
-We designed the CpG Predictor to serve as a baseline for models, as CpG content is correlated with many functional readouts. It ignores the type, cell type, and species keys in the Evaluator requests since it is simply counting CpG instances across the sequences. For point requests, it will return the mean CpG counts across the input sequence, and, for track requests, it will return the CpG density at each base pair (calculated using a sliding window of 100bp). Any scaling type can be fulfilled by this Predictor.
+We designed the CpG Predictor to serve as a baseline for models, as CpG content is correlated with many functional readouts. It ignores the type, cell type, and species keys in the Evaluator requests since it is simply counting CpG instances across the sequences. For point requests, it will return the mean CpG counts across the input sequence, and, for track requests, it will return the CpG density at each base pair (calculated using a sliding window of 50bp). Any scaling type can be fulfilled by this Predictor.
 
 ## Important Links
 
@@ -20,16 +20,17 @@ We designed the CpG Predictor to serve as a baseline for models, as CpG content 
 ### Run CpG Prediction
 
 ```bash
-apptainer run --containall run cpg_predictor.sif <ip_address> <port>
+apptainer run --containall cpg_predictor.sif <ip_address> <port>
 # Example: apptainer run --containall cpg_predictor.sif 0.0.0.0 5000
 ```
 
 ### Build Container
 
-If you would like to make edits to the code/re-build the container use the command below. Directory structure must be as shown below.
+If you would like to make edits to the code/re-build the container use the command below. Run the build from inside `src/` (the `.def` copies files from the current directory).
 
 ```bash
-apptainer build cpg_predictor.sif predictor.def
+cd src
+apptainer build cpg_predictor.sif cpg_predictor.def
 ```
 
 ## API Endpoints
@@ -64,7 +65,7 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
     "seq_id": "ACGTACGT..."
   },
   "prediction_ranges": {
-    "seq_id": [start, end]
+    "seq_id": [start, end]  # 0-based, half-open [start, end): start < end <= len(sequence)
   }
 }
 ```
@@ -73,45 +74,52 @@ Main prediction endpoint. Accepts DNA sequences and returns CpG predictions.
 
 ```json
 {
-  "predictor_name": "CpG Predictor",
+  "predictor_name": "CpG_20261029-234547_EDT",  # CpG_<build timestamp>
   "bin_size": 1, # only returned for track requests
   "prediction_tasks": [
     {
       "name": "task_name",
       "type_requested": "accessibility",
-        "type_actual": [
-            "NA"
-        ],
-        "cell_type_requested": "cell_type",
-        "cell_type_actual": "NA",
-        "species_requested": "mus_musculus",
-        "species_actual": "NA",
-        "scale_prediction_requested": "linear",
-        "scale_prediction_actual": "linear",
-        "predictions": {
-            "seq_id": [0.025, 0.032, ...]
+      "type_actual": ["cpg_density"],
+      "cell_type_requested": "cell_type",
+      "cell_type_actual": null,  # cell type is ignored by this predictor
+      "species_requested": "mus_musculus",
+      "species_actual": null,  # species is ignored by this predictor
+      "scale_prediction_requested": "linear",
+      "scale_prediction_actual": "linear",
+      "predictions": {
+        "seq_id": [0.025, 0.032, ...]
       }
     }
   ]
 }
 ```
 
+**Errors:**
+
+- **400** `bad_prediction_request`: missing mandatory keys, invalid values, or malformed `prediction_ranges` (not a list, negative indices, or `start >= end`)
+- **422** `prediction_request_failed`: a `readout` other than `point`/`track`, or a `prediction_ranges` entry out of bounds for its sequence
+
 ## Algorithm Details
 
-- **Point Mode**: Calculates mean CpG frequency across entire sequence
+- **Point Mode**: Calculates mean CpG frequency across entire sequence, as CpGs per bp: `(CpG count + 1e-9) / sequence length`. Log scale returns `log2` of this value (the `1e-9` avoids `log2(0)`)
 - **Track Mode**: Uses 50bp sliding window to compute per-base CpG density
 - **CpG Definition**: Dinucleotide sequence "CG"
 - **Density Calculation**: (CpG count / window length) × 100
-- **Prediction ranges**: Sequences are trimmed to the start and end of the ranges before calculating CpG content
+- **Prediction ranges** (half-open `[start, end)`):
+  - Point: the CpG mean is calculated over `sequence[start:end]` only
+  - Track: returns `end - start` values, identical to computing the density over the full sequence and keeping positions `start` to `end - 1` (windows near the range edges still see the flanking sequence)
 
 ## Directory Structure
 
 ```
-CpG_Predictor/
-├── predictor_RestAPI.py       # Main Flask API server
-├── cpg_utils.py                # CpG calculation functions
-├── predictor_help_message.json # Metadata
-├── error_checking_functions.py # Validation utilities
-├── schema_validation.py        # Request schema validation
+src/
+├── cpg_predictor.def            # Apptainer build definition
+├── config.py                    # Predictor name, formats, paths
+├── predictor_RestAPI.py         # Main Flask API server
+├── cpg_utils.py                 # CpG calculation functions
+├── predictor_help_message.json  # Metadata
+├── error_checking_functions.py  # Validation utilities
+├── schema_validation.py         # Request schema validation
 └── predictor_content_handler.py # Format encoding/decoding
 ```
