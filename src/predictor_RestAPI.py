@@ -114,16 +114,13 @@ def predict():
                 "prediction_tasks": [],
             }
 
-        elif readout_type in ["point"]:
+        else:
             json_return = {
                 'predictor_name': PREDICTOR_NAME,
                 # Prediction task is an array of objects for all requested tasks
                 "prediction_tasks": [],
             }
-            
-        else:
-            raise BadRequestError(f"Test Predictor cannot process '{readout_type}' readout type.")
-
+  
         # Loop through all the prediction tasks
         for prediction_task in evaluator_request["prediction_tasks"]:
 
@@ -136,11 +133,11 @@ def predict():
             current_prediction_task = {
                 "name": prediction_task["name"],
                 "type_requested": request_type,
-                "type_actual": ["NA"],  # If remapped, update this
+                "type_actual": ["cpg_density"],  # If remapped, update this
                 "cell_type_requested": cell_type,
-                "cell_type_actual": "NA",  # If remapped, update this
+                "cell_type_actual": None,  # If remapped, update this
                 "species_requested": prediction_task["species"],
-                "species_actual": "NA",
+                "species_actual": None,
                 "scale_prediction_requested": scale_requested,
                 "scale_prediction_actual": scale_actual,
                 "predictions": task_prediction,

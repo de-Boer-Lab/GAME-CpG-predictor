@@ -220,10 +220,9 @@ def check_prediction_task_scale(prediction_tasks, json_return_error):
 def check_prediction_ranges(prediction_ranges, sequences, json_return_error):
     """
     Checks that prediction_ranges are formatted correctly.
-    Now includes checks for positive integers and start <= end.
+    Includes checks for non-negative integers and start < end.
     """
     for key, value in prediction_ranges.items():
-        print(value)
         if not isinstance(value, list):
             json_return_error['bad_prediction_request'].append(f"Values for '{key}' in 'prediction_ranges' must be in a list")
             continue
@@ -243,11 +242,10 @@ def check_prediction_ranges(prediction_ranges, sequences, json_return_error):
         end = value[1]
         
         if start < 0 or end < 0:
-            json_return_error['bad_prediction_request'].append(f"Invalid range for '{key}' in 'prediction_ranges': indices must be positive. Received [{start}, {end}]")
+            json_return_error['bad_prediction_request'].append(f"Invalid range for '{key}' in 'prediction_ranges': indices must be non-negative. Received [{start}, {end}]")
             
-        if start > end:
-            json_return_error['bad_prediction_request'].append(f"Invalid range for '{key}' in 'prediction_ranges': start index ({start}) cannot be greater than end index ({end}). Received [{start}, {end}]")
-
+        if start >= end:
+            json_return_error['bad_prediction_request'].append(f"Invalid range for '{key}' in 'prediction_ranges': start index ({start}) must be less than end index ({end}). Received [{start}, {end}]")
 
     return json_return_error
 

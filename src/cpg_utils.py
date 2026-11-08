@@ -15,27 +15,40 @@ def predict_cpg(sequences: dict, readout: str, scale_requested, prediction_range
     # Instead, create a copy to work with.
     seqs = {k: v for k, v in sequences.items()}
     
+    # prediction_ranges are in FLANKED coordinates (relative to the sequence after
+    # any upstream/downstream flanks were applied in preprocess_data).
+    #   point -> crop the INPUT so the mean covers exactly the range.
+    #   track -> crop the OUTPUT so edge positions keep their full window context
     # If prediction ranges were sent from the Evaluator use them to crop the sequences
-    if prediction_ranges:
-        for seq_id, pr in prediction_ranges.items():
-            if pr: # Only process non-empty ranges
-                start, end = pr
-                # print(f"DEBUG: Original length of sequence '{seq_id}': {len(sequences[seq_id])} bases.")
-                # Slice the sequence. `prediction_range` is start, end inclusive
-                seqs[seq_id] = seqs[seq_id][start:end+1]
-                # Print length of sequence after trimming for debugging
-                # print(f"DEBUG: Trimmed length of sequence '{seq_id}': {len(seqs[seq_id])} bases.")
-                print(f"Sequence '{seq_id}' trimmed to prediction range [{start}, {end}].")
+    window_size = 50
+    half_window = window_size // 2
 
     if readout == "point":
         for seq_id, sequence in seqs.items():
+            pr = prediction_ranges.get(seq_id) if prediction_ranges else None
+            if pr:
+                start, end = pr
+                sequence = sequence[start:end]
+                print(f"Sequence '{seq_id}' cropped to range [{start}, {end}] before point calc.")
             predictions[seq_id] = cpg_mean(sequence, scale_actual)
    
     if readout == "track":
         for seq_id, sequence in seqs.items():
-            predictions[seq_id] = calculate_cpg_per_base(sequence, scale_actual, window_size=50)
+            pr = prediction_ranges.get(seq_id) if prediction_ranges else None
+            if pr:
+                start, end = pr
+                lo = max(0, start - half_window)
+                hi = min(len(sequence), end + half_window)   # minimal sufficient right pad
+                padded = calculate_cpg_per_base(sequence[lo:hi], scale_actual, window_size=window_size)
+                left_trim = start - lo
+                track = padded[left_trim:left_trim + (end - start)]
+                print(f"Track for '{seq_id}' windowed on [{lo}, {hi}) and trimmed to range [{start}, {end}].")
+            else:
+                track = calculate_cpg_per_base(sequence, scale_actual, window_size=window_size)
+            predictions[seq_id] = track
 
     return predictions, scale_actual
+
 
 def cpg_mean(seq: str, scale_actual) -> int:
     """Calculate average CpG sites ('CG') in a DNA sequence."""
@@ -56,22 +69,23 @@ def calculate_cpg_per_base(sequence, scale_actual, window_size):
     """
     Calculate CpG density and counts at base pair level using a sliding window.
     
+    Calculate CpG density at base pair level using a sliding window.
+    
     Parameters:
     -----------
     sequence : str
-        DNA sequence (ACGT)
+        DNA sequence (ACGTN)
+    scale_actual : str
+        "linear" or "log"; log applies log2 with a small epsilon
     window_size : int
-        Size of sliding window for calculating local CpG density (default: 100bp)
+        Size of the sliding window centred on each position
     
     Returns:
     --------
-    pd.DataFrame
-        DataFrame with columns:
-        - position: base pair position (0-indexed)
-        - base: nucleotide at this position
-        - is_cpg_start: whether this position starts a CpG dinucleotide
-        - cpg_density: local CpG density in surrounding window
-        - cpg_count: number of CpGs in surrounding window
+    list of float
+        One value per base: CpGs per 100 bp within the window around that
+        position. Windows are clipped at the sequence edges, so the rate is
+        normalised by the actual window length.
     """
     sequence = sequence.upper().replace(' ', '').replace('\n', '')
     seq_len = len(sequence)
@@ -96,7 +110,10 @@ def calculate_cpg_per_base(sequence, scale_actual, window_size):
         start = max(0, i - half_window)
         end = min(seq_len, i + half_window)
         
-        # Count CpGs in window
+        # Count CpGs WHOLLY INSIDE the window. A CpG whose C is the window's last base
+        # and whose G falls just past the edge is not counted
+        # NOTE this differs from cpg_mean (point readout), which scans the whole
+        # sequence and so has no window boundary to straddle.
         window_seq = sequence[start:end]
         cpgs_in_window = window_seq.count('CG')
         window_len = end - start
